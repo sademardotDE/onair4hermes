@@ -10,11 +10,19 @@
  * der Proxy kennt außerdem den API-Token aus den Plugin-Settings.
  */
 
-import { Tip, usePluginI18n } from '@hermes/plugin-sdk'
+import {
+  host,
+  PALETTE_AREA,
+  ROUTES_AREA,
+  SIDEBAR_NAV_AREA,
+  Tip,
+  usePluginI18n,
+} from '@hermes/plugin-sdk'
 import { useEffect, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
 const ID = 'onair4hermes'
+const PATH = '/onair'
 
 function strings(locale) {
   return locale.startsWith('de')
@@ -442,16 +450,51 @@ function OnAirPane({ rest }) {
   })
 }
 
+
+function OnAirPage({ rest }) {
+  const S = strings(getLocale())
+  return jsxs('div', {
+    className: 'h-full overflow-auto p-4',
+    children: [
+      jsx('h1', { className: 'mb-3 text-base font-semibold', children: S.title }),
+      jsx('div', { className: 'mx-auto max-w-3xl', children: jsx(OnAirPane, { rest }) }),
+    ],
+  })
+}
+
 export default {
   id: ID,
   name: 'OnAir (SDR)',
   register(ctx) {
     const rest = (path, opts) => ctx.rest(path, opts)
+    console.info('[plugins] onair4hermes registered')
     ctx.i18n.register({
       en: { chipTooltip: 'OnAir SDR receiver' },
       de: { chipTooltip: 'OnAir SDR-Empfänger' },
     })
     ctx.registerMany([
+      {
+        id: 'page',
+        area: ROUTES_AREA,
+        title: 'OnAir',
+        data: { path: PATH },
+        render: () => jsx(OnAirPage, { rest }),
+      },
+      {
+        id: 'nav',
+        area: SIDEBAR_NAV_AREA,
+        data: { path: PATH, label: 'OnAir', codicon: 'radio-tower' },
+      },
+      {
+        id: 'open',
+        area: PALETTE_AREA,
+        data: {
+          id: 'onair4hermes.open',
+          label: 'OnAir öffnen',
+          keywords: ['onair', 'sdr', 'funk', 'radio', 'spektrum', 'empfänger', 'receiver'],
+          run: () => host.navigate(PATH),
+        },
+      },
       {
         id: 'pane',
         area: 'panes',

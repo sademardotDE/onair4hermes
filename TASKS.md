@@ -33,6 +33,12 @@ Desktop-Pane). Doku: [README.md](README.md).
       `react/jsx-runtime` (exportiert keine Hooks) → jetzt aus `react`
       (Fund im Desktop-Log: „does not provide an export named 'useEffect'“);
       Regressionstest ergänzt
+- [x] Sichtbarer Einstieg: eigene Desktop-Seite `/onair`, Sidebar-Eintrag
+      „OnAir“, Befehlspalette („OnAir öffnen“) zusätzlich zu Pane und Chip
+- [x] Ursache „kein OnAir-Button“ gefunden: Die Desktop-Hälfte eines
+      einheitlichen Pakets ist per Marker (`defaultEnabled: false`) opt-in;
+      ohne explizite Entscheidung wird sie still übersprungen. Entscheidung
+      `onair4hermes: true` gesetzt (persistiert in der Desktop-localStorage)
 - [x] Modus-Namen (`"fm"`, `"FM broadcast"`) werden über `/modes` auf die
       Familien-ID abgebildet (`set_mode`)
 

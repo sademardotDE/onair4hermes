@@ -127,9 +127,18 @@ Aufruf.
 * `dashboard/plugin_api.py` wird unter `/api/plugins/onair4hermes/` gemountet
   und proxyt `status`, `devices`, `modes`, `telemetry`, `spectrum`, `start`,
   `stop`, `mode`, `frequency`, `config`.
-* `desktop/plugin.js` registriert ein Pane (`panes`, rechts, 360 px) und einen
-  Status-Chip (`statusBar.right`). Beide pollen über `ctx.rest`; der Renderer
+* `desktop/plugin.js` registriert eine eigene Seite (`/onair`, Sidebar-Eintrag
+  „OnAir“ und Befehlspalette), ein Pane (`panes`, rechts, 360 px) und einen
+  Status-Chip (`statusBar.right`). Alles pollt über `ctx.rest`; der Renderer
   spricht nie direkt mit OnAir (die API sendet keine CORS-Header).
+
+> **Wichtig – Desktop-Hälfte ist opt-in:** Als Teil eines einheitlichen
+> Agent+Desktop-Pakets wird die Desktop-Hälfte standardmäßig **deaktiviert**
+> ausgeliefert (`.hermes-package.json` → `defaultEnabled: false`). Nach der
+> Installation einmal unter **Fähigkeiten → Plugins** den Schalter
+> `onair4hermes` aktivieren (oder in der Plugins-Liste „Enable“). Ohne diesen
+> Schalter erscheint kein OnAir-Button, und es gibt bewusst keine Fehlermeldung
+> im Log.
 
 ## Tests
 
