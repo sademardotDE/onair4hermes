@@ -1,0 +1,46 @@
+manifest_version: 2
+api_version: 1
+name: onair4hermes
+label: OnAir (SDR / Funküberwachung)
+kind: standalone
+version: 0.1.0
+description: >-
+  Bindet OnAir (SDR-Empfänger, 292+ Decoder-Modi) als Hermes-Geräte ein.
+  Steuert den OnAir-Receiver über die Remote-Control HTTP API
+  (127.0.0.1:8765): Geräte, Modi, Status, Telemetrie, Spektrum, Start/Stopp,
+  Modus- und Frequenzwechsel.
+author: fm
+license: GPL-3.0-or-later
+homepage: https://github.com/sademardotDE/onair4hermes
+tags: [sdr, onair, radio, receiver, remote-control, api]
+platforms: [linux]
+requires_hermes: ">=0.21.5"
+python_dependencies: []
+
+provides_tools:
+  - onair_list_devices
+  - onair_list_modes
+  - onair_status
+  - onair_telemetry
+  - onair_spectrum
+  - onair_start
+  - onair_stop
+  - onair_set_mode
+  - onair_set_frequency
+
+provides_hooks: []
+
+config_schema:
+  config:
+    type: str
+    default: ""
+    label: OnAir-Gerätekonfiguration
+    description: >-
+      Pfad zur JSON-Konfigurationsdatei mit statischen OnAir-Geräten.
+      Leer bedeutet: onair_devices.json neben dem Plugin (wird beim ersten
+      Anlegen automatisch erstellt).
+  base_url:
+    type: str
+    default: "http://127.0.0.1:8765"
+    label: OnAir Remote-Control API URL
+    description: Basis-URL der OnAir Remote-Control HTTP API.

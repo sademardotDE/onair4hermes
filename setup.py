@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name="onair4hermes",
@@ -6,15 +6,11 @@ setup(
     description="Hermes-Plugin für OnAir (SDR / Funküberwachung)",
     author="fm",
     license="GPL-3.0-or-later",
-    packages=find_packages(exclude=["tests*", "docs*"]),
-    package_data={
-        "onair4hermes": ["plugin.json", "onair_devices.json"],
-    },
-    include_package_data=True,
+    py_modules=["hermes_plugin", "onair_client"],
     python_requires=">=3.9",
     entry_points={
         "console_scripts": [
-            "onair4hermes=onair4hermes.hermes_plugin:main",
+            "onair4hermes=hermes_plugin:main",
         ],
     },
     classifiers=[
