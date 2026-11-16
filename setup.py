@@ -7,6 +7,10 @@ setup(
     author="fm",
     license="GPL-3.0-or-later",
     packages=find_packages(exclude=["tests*", "docs*"]),
+    package_data={
+        "onair4hermes": ["plugin.json", "onair_devices.json"],
+    },
+    include_package_data=True,
     python_requires=">=3.9",
     entry_points={
         "console_scripts": [

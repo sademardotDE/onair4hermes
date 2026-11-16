@@ -1,0 +1,2 @@
+[console_scripts]
+onair4hermes = onair4hermes.hermes_plugin:main
