@@ -1,0 +1,43 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "onair4hermes",
+  "version": "0.2.0",
+  "description": "OnAir (SDR receiver, 170+ decoder modes) as Hermes devices: status, devices, modes, telemetry, spectrum, start/stop, mode and frequency changes via the local remote-control HTTP API, plus the 'hermes onair' CLI, a dashboard proxy backend and a desktop pane.",
+  "author": {
+    "name": "fm"
+  },
+  "license": "GPL-3.0-or-later",
+  "repository": "https://github.com/sademardotDE/onair4hermes",
+  "homepage": "https://github.com/sademardotDE/onair4hermes",
+  "keywords": [
+    "sdr",
+    "onair",
+    "radio",
+    "receiver",
+    "remote-control",
+    "api",
+    "spectrum",
+    "hermes",
+    "desktop"
+  ],
+  "extensions": {
+    "com.nousresearch.hermes": {
+      "python_dependencies": [],
+      "commands": [
+        "onair"
+      ],
+      "features": [
+        "device_listing",
+        "mode_listing",
+        "receiver_status",
+        "telemetry",
+        "spectrum",
+        "receiver_control",
+        "frequency_control",
+        "mode_control",
+        "cli",
+        "desktop_pane"
+      ]
+    }
+  }
+}

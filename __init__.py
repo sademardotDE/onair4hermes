@@ -3,20 +3,26 @@
 Hermes lädt dieses Paket als Verzeichnis-Plugin (``plugin.yaml`` + ``__init__.py``)
 und ruft :func:`register` mit einem Plugin-Kontext auf. Die Registrierung ist
 bewusst schlank: sie registriert nur Tools, Schemas und die ``hermes onair``-CLI.
-Teure Importe (Netzwerk, Subprozesse) passieren erst in den Handlern.
+Teure Importe (Netzwerk) passieren erst in den Handlern.
+
+Die Handler geben JSON-Strings zurück (Hermes-Tool-Vertrag) und akzeptieren die
+Argumente als Dict, wie der Tool-Dispatcher sie übergibt.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import json
+from typing import Any, Callable
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # name -> (Modul, Attribut); wird beim ersten Zugriff importiert.
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "HermesPlugin": (".hermes_plugin", "HermesPlugin"),
     "create_plugin": (".hermes_plugin", "create_plugin"),
+    "plugin_from_ctx": (".hermes_plugin", "plugin_from_ctx"),
     "OnAirClient": (".onair_client", "OnAirClient"),
+    "OnAirError": (".onair_client", "OnAirError"),
 }
 
 __all__ = ["register", "__version__", *sorted(_LAZY_EXPORTS)]
@@ -40,7 +46,7 @@ def __dir__() -> list[str]:
     return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
 
-# --- Tool-Schemas (JSON-Schema für Hermes-Tool-Registrierung) ---------------
+# --- Tool-Schemas (JSON-Schema für die Hermes-Tool-Registrierung) -----------
 
 _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "onair_list_devices": {
@@ -59,13 +65,13 @@ _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         "type": "object",
         "properties": {},
         "additionalProperties": False,
-        "description": "Aktueller OnAir-Receiver-Status.",
+        "description": "Aktueller OnAir-Receiver-Status inklusive Gerät, Modus und Frequenz.",
     },
     "onair_telemetry": {
         "type": "object",
         "properties": {},
         "additionalProperties": False,
-        "description": "Telemetrie des aktiven OnAir-Modus.",
+        "description": "Telemetrie des aktiven OnAir-Modus (SNR, Lock, Qualität, Details).",
     },
     "onair_spectrum": {
         "type": "object",
@@ -109,26 +115,27 @@ _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "sub": {
                 "type": "string",
                 "description": "Optionaler Sub-Modus (z. B. 'ft8').",
-            }
+            },
         },
         "required": ["family"],
         "additionalProperties": False,
-        "description": "OnAir-Decoder-Modus wechseln (nur bei gestopptem Receiver).",
+        "description": "OnAir-Decoder-Modus wechseln (OnAir verlangt einen gestoppten Receiver).",
     },
     "onair_set_frequency": {
         "type": "object",
         "properties": {
             "hz": {
                 "type": "integer",
-                "description": "Frequenz in Hertz.",
+                "description": "Frequenz in Hertz (z. B. 100000000).",
             },
             "mhz": {
                 "type": "number",
-                "description": "Frequenz in Megahertz.",
-            }
+                "description": "Frequenz in Megahertz (z. B. 100.0).",
+            },
         },
+        "anyOf": [{"required": ["hz"]}, {"required": ["mhz"]}],
         "additionalProperties": False,
-        "description": "Empfangsfrequenz setzen (Hz oder MHz).",
+        "description": "Empfangsfrequenz setzen – genau eine der beiden Angaben.",
     },
 }
 
@@ -145,23 +152,81 @@ _TOOL_EMOJIS = {
 }
 
 
-def _make_handlers(plugin: Any) -> dict[str, Any]:
+def _dump(payload: Any) -> str:
+    """Tool-Ergebnis als JSON-String (Hermes verlangt String oder Multimodal-Envelope)."""
+    return json.dumps(payload, ensure_ascii=False, default=str)
+
+
+def _make_handlers(plugin: Any) -> dict[str, Callable[..., str]]:
     """Erstellt Handler-Funktionen für alle Tools aus der Plugin-Instanz."""
-    return {
-        "onair_list_devices": lambda **kw: plugin.get_devices(),
-        "onair_list_modes": lambda **kw: plugin.list_modes(),
-        "onair_status": lambda **kw: plugin.status(),
-        "onair_telemetry": lambda **kw: plugin.telemetry(),
-        "onair_spectrum": lambda **kw: plugin.spectrum(kw.get("bins", 512)),
-        "onair_start": lambda **kw: {"started": plugin.start(kw.get("device_index"))},
-        "onair_stop": lambda **kw: {"stopped": plugin.stop()},
-        "onair_set_mode": lambda **kw: {
-            "mode_set": plugin.set_mode(kw["family"], kw.get("sub"))
-        },
-        "onair_set_frequency": lambda **kw: {
-            "freq_set": plugin.set_frequency(kw.get("hz"), kw.get("mhz"))
-        },
+    from .onair_client import OnAirError
+
+    def wrap(func: Callable[[dict[str, Any]], dict[str, Any]]) -> Callable[..., str]:
+        def handler(args: Any = None, **kwargs: Any) -> str:
+            call_args = dict(args or {}) if isinstance(args, dict) else {}
+            try:
+                payload = func(call_args)
+            except OnAirError as exc:
+                return _dump({"ok": False, "error": str(exc), "status": exc.status})
+            except (TypeError, ValueError, KeyError) as exc:
+                return _dump({"ok": False, "error": str(exc)})
+            return _dump(payload)
+
+        return handler
+
+    def list_devices(_args: dict[str, Any]) -> dict[str, Any]:
+        devices = plugin.get_devices()
+        return {"ok": True, "count": len(devices), "devices": devices}
+
+    def list_modes(_args: dict[str, Any]) -> dict[str, Any]:
+        modes = plugin.list_modes()
+        return {"ok": True, "count": len(modes), "modes": modes}
+
+    def status(_args: dict[str, Any]) -> dict[str, Any]:
+        return {"ok": True, **plugin.status()}
+
+    def telemetry(_args: dict[str, Any]) -> dict[str, Any]:
+        return {"ok": True, "telemetry": plugin.telemetry()}
+
+    def spectrum(args: dict[str, Any]) -> dict[str, Any]:
+        bins = args.get("bins", 512)
+        return {"ok": True, "spectrum": plugin.spectrum(int(bins))}
+
+    def start(args: dict[str, Any]) -> dict[str, Any]:
+        index = args.get("device_index")
+        plugin.start(index)
+        return {"ok": True, "started": True, "device_index": index}
+
+    def stop(_args: dict[str, Any]) -> dict[str, Any]:
+        plugin.stop()
+        return {"ok": True, "stopped": True}
+
+    def set_mode(args: dict[str, Any]) -> dict[str, Any]:
+        family = args["family"]
+        if isinstance(family, str) and family.strip().isdigit():
+            family = int(family)
+        sub = args.get("sub")
+        plugin.set_mode(family, sub)
+        return {"ok": True, "mode_set": True, "family": family, "sub": sub}
+
+    def set_frequency(args: dict[str, Any]) -> dict[str, Any]:
+        hz = args.get("hz")
+        mhz = args.get("mhz")
+        plugin.set_frequency(hz=hz, mhz=mhz)
+        return {"ok": True, "frequency_set": True, "hz": hz, "mhz": mhz}
+
+    functions: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+        "onair_list_devices": list_devices,
+        "onair_list_modes": list_modes,
+        "onair_status": status,
+        "onair_telemetry": telemetry,
+        "onair_spectrum": spectrum,
+        "onair_start": start,
+        "onair_stop": stop,
+        "onair_set_mode": set_mode,
+        "onair_set_frequency": set_frequency,
     }
+    return {name: wrap(func) for name, func in functions.items()}
 
 
 def register(ctx: Any) -> None:
@@ -171,9 +236,9 @@ def register(ctx: Any) -> None:
     Capability-Probe von ``hermes plugins validate``). Darf daher weder Netzwerk
     noch OnAir-Hardware voraussetzen.
     """
-    from .hermes_plugin import register_cli, create_plugin
+    from .hermes_plugin import plugin_from_ctx, register_cli
 
-    plugin = create_plugin()
+    plugin = plugin_from_ctx(ctx)
     handlers = _make_handlers(plugin)
 
     for name, schema in _TOOL_SCHEMAS.items():

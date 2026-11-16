@@ -1,0 +1,11 @@
+{
+  "name": "onair4hermes",
+  "label": "OnAir (SDR)",
+  "description": "OnAir-Receiver (SDR) steuern: Status, Geräte, Modi, Telemetrie, Spektrum, Start/Stop, Modus- und Frequenzwechsel über die lokale Remote-Control-API.",
+  "icon": "Radio",
+  "version": "0.2.0",
+  "tab": {
+    "hidden": true
+  },
+  "api": "plugin_api.py"
+}

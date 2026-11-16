@@ -3,16 +3,18 @@ api_version: 1
 name: onair4hermes
 label: OnAir (SDR / Funküberwachung)
 kind: standalone
-version: 0.1.0
+version: 0.2.0
 description: >-
-  Bindet OnAir (SDR-Empfänger, 292+ Decoder-Modi) als Hermes-Geräte ein.
+  Bindet OnAir (SDR-Empfänger, 170+ Decoder-Modi) als Hermes-Geräte ein.
   Steuert den OnAir-Receiver über die Remote-Control HTTP API
-  (127.0.0.1:8765): Geräte, Modi, Status, Telemetrie, Spektrum, Start/Stopp,
-  Modus- und Frequenzwechsel.
+  (standardmäßig 127.0.0.1:8765): Geräte, Modi, Status, Telemetrie, Spektrum,
+  Start/Stopp, Modus- und Frequenzwechsel. Enthält die CLI ``hermes onair``,
+  ein Dashboard-Backend als Proxy und eine Desktop-Seite mit Status-Chip,
+  Live-Spektrum und Steuerung.
 author: fm
 license: GPL-3.0-or-later
 homepage: https://github.com/sademardotDE/onair4hermes
-tags: [sdr, onair, radio, receiver, remote-control, api]
+tags: [sdr, onair, radio, receiver, remote-control, api, spectrum, desktop]
 platforms: [linux]
 requires_hermes: ">=0.21.5"
 python_dependencies: []
@@ -28,6 +30,9 @@ provides_tools:
   - onair_set_mode
   - onair_set_frequency
 
+provides_commands:
+  - onair
+
 provides_hooks: []
 
 config_schema:
@@ -36,11 +41,29 @@ config_schema:
     default: ""
     label: OnAir-Gerätekonfiguration
     description: >-
-      Pfad zur JSON-Konfigurationsdatei mit statischen OnAir-Geräten.
-      Leer bedeutet: onair_devices.json neben dem Plugin (wird beim ersten
-      Anlegen automatisch erstellt).
+      Pfad zur JSON-Konfigurationsdatei mit statischen OnAir-Geräten. Leer
+      bedeutet: onair_devices.json neben dem Plugin (wird beim ersten Anlegen
+      automatisch erstellt). Die Datei ist nur ein Fallback, wenn die
+      OnAir-API nicht erreichbar ist.
   base_url:
     type: str
     default: "http://127.0.0.1:8765"
     label: OnAir Remote-Control API URL
-    description: Basis-URL der OnAir Remote-Control HTTP API.
+    description: >-
+      Basis-URL der OnAir Remote-Control HTTP API. In OnAir aktivieren unter
+      Ansicht > Datenfeeds > Remote-Control-API.
+  token:
+    type: secret
+    env: ONAIR_API_TOKEN
+    label: OnAir API-Token
+    description: >-
+      Token aus OnAir (Ansicht > Datenfeeds > Remote-Control-API > "Token
+      kopieren"). Nötig, wenn in OnAir "Programs on this computer need the
+      token too" aktiv ist. Wird in ~/.hermes/.env als ONAIR_API_TOKEN
+      gespeichert und nie in config.yaml geschrieben.
+  timeout:
+    type: float
+    default: 5.0
+    label: API-Timeout (Sekunden)
+    description: >-
+      Timeout für einzelne Anfragen an die OnAir-API (0,5 bis 60 Sekunden).
